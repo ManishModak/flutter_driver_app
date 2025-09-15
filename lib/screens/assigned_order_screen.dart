@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import '../models/order.dart';
 import '../services/location_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../util/order_status_enum.dart';
 
 class AssignedOrderScreen extends StatefulWidget {
   const AssignedOrderScreen({super.key});
@@ -31,6 +32,8 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
   final LocationService _locationService = LocationService();
   Position? _currentPosition;
   StreamSubscription<Position>? _positionStreamSubscription;
+
+  OrderStatus _orderStatus = OrderStatus.Assigned;
 
   void initState() {
     super.initState();
@@ -127,12 +130,25 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
 
             const Spacer(),
 
+            _buildActionWidget(),
+            const SizedBox(height: 16),
             _buildDriverLocationStatus(),
             const SizedBox(height: 16),
           ],
         ),
       ),
     );
+  }
+
+  String _formatDistance(double distanceInMeters) {
+    if (distanceInMeters >= 1000) {
+      // If distance is 1km or more, convert to km and show one decimal place.
+      final double distanceInKm = distanceInMeters / 1000;
+      return '${distanceInKm.toStringAsFixed(1)} km';
+    } else {
+      // Otherwise, show the distance in meters.
+      return '${distanceInMeters.toStringAsFixed(0)} m';
+    }
   }
 
   Widget _buildDriverLocationStatus() {
@@ -197,6 +213,173 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Builds the main action button and distance text based on the current order status.
+  Widget _buildActionWidget() {
+    switch (_orderStatus) {
+      case OrderStatus.Assigned:
+        return _buildButton('Start Trip', () {
+          setState(() => _orderStatus = OrderStatus.TripStarted);
+        });
+
+      case OrderStatus.TripStarted:
+        // Initialize distance with a very large number.
+        double distanceToRestaurant = double.infinity;
+
+        // Only calculate distance if we have the driver's location.
+        if (_currentPosition != null) {
+          distanceToRestaurant = _locationService.getDistance(
+            _currentPosition!.latitude,
+            _currentPosition!.longitude,
+            assignedOrder.restaurantLat,
+            assignedOrder.restaurantLng,
+          );
+        }
+
+        // THE CRITICAL GEOFENCE CHECK
+        bool canArrive = distanceToRestaurant <= 50;
+
+        // --- DEBUG LOGGING ---
+        print('--- GEOFENCE CHECK (Restaurant) ---');
+        print('Current Order Status: $_orderStatus');
+        print(
+          'Current Position: ${_currentPosition?.latitude}, ${_currentPosition?.longitude}',
+        );
+        print(
+          'Restaurant Position: ${assignedOrder.restaurantLat}, ${assignedOrder.restaurantLng}',
+        );
+        print('Calculated Distance: $distanceToRestaurant meters');
+        print('Can Arrive? (is distance <= 50): $canArrive');
+        print('Button will be ENABLED: $canArrive');
+        print(
+          'Button callback will be: ${canArrive ? "FUNCTION" : "NULL (DISABLED)"}',
+        );
+        print('------------------------------------');
+        // --- END DEBUG LOGGING ---
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              // Use our new formatter here
+              'Distance to Restaurant: ${_formatDistance(distanceToRestaurant)}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            _buildButton(
+              'Arrived at Restaurant',
+              // The button is DISABLED by passing null if canArrive is false.
+              canArrive
+                  ? () {
+                      setState(() => _orderStatus = OrderStatus.AtRestaurant);
+                    }
+                  : null,
+            ),
+          ],
+        );
+
+      case OrderStatus.AtRestaurant:
+        return _buildButton('Picked Up Order', () {
+          setState(() => _orderStatus = OrderStatus.PickedUp);
+        });
+
+      case OrderStatus.PickedUp:
+        double distanceToCustomer = double.infinity;
+        if (_currentPosition != null) {
+          distanceToCustomer = _locationService.getDistance(
+            _currentPosition!.latitude,
+            _currentPosition!.longitude,
+            assignedOrder.customerLat,
+            assignedOrder.customerLng,
+          );
+        }
+
+        // THE CRITICAL GEOFENCE CHECK
+        bool canDeliver = distanceToCustomer <= 50;
+
+        // --- DEBUG LOGGING ---
+        print('--- GEOFENCE CHECK (Customer) ---');
+        print('Current Order Status: $_orderStatus');
+        print(
+          'Current Position: ${_currentPosition?.latitude}, ${_currentPosition?.longitude}',
+        );
+        print(
+          'Customer Position: ${assignedOrder.customerLat}, ${assignedOrder.customerLng}',
+        );
+        print('Calculated Distance: $distanceToCustomer meters');
+        print('Can Deliver? (is distance <= 50): $canDeliver');
+        print('Button will be ENABLED: $canDeliver');
+        print(
+          'Button callback will be: ${canDeliver ? "FUNCTION" : "NULL (DISABLED)"}',
+        );
+        print('------------------------------------');
+        // --- END DEBUG LOGGING ---
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              // Use our new formatter here
+              'Distance to Customer: ${_formatDistance(distanceToCustomer)}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            _buildButton(
+              'Arrived at Customer',
+              // The button is DISABLED by passing null if canDeliver is false.
+              canDeliver
+                  ? () {
+                      setState(() => _orderStatus = OrderStatus.AtCustomer);
+                    }
+                  : null,
+            ),
+          ],
+        );
+
+      case OrderStatus.AtCustomer:
+        return _buildButton('Complete Delivery', () {
+          setState(() => _orderStatus = OrderStatus.Delivered);
+        });
+
+      case OrderStatus.Delivered:
+        return const Center(
+          child: Text(
+            'Order Complete! 🎉',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.green,
+            ),
+          ),
+        );
+    }
+  }
+
+  /// A helper method to create a consistently styled ElevatedButton.
+  /// The `onPressed` callback can be null, which automatically disables the button.
+  Widget _buildButton(String text, VoidCallback? onPressed) {
+    // --- DEBUG LOGGING ---
+    print('🔘 BUILDING BUTTON: "$text"');
+    print(
+      '🔘 onPressed callback is: ${onPressed == null ? "NULL (BUTTON DISABLED)" : "FUNCTION (BUTTON ENABLED)"}',
+    );
+    print(
+      '🔘 Button will appear as: ${onPressed == null ? "GREY/DISABLED" : "TEAL/ENABLED"}',
+    );
+    // --- END DEBUG LOGGING ---
+
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.teal,
+        disabledBackgroundColor: Colors.grey, // Color when button is disabled
+        padding: const EdgeInsets.symmetric(vertical: 16),
+      ),
+      onPressed: onPressed,
+      child: Text(text, style: const TextStyle(color: Colors.white)),
     );
   }
 }
