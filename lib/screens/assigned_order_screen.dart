@@ -57,7 +57,7 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
     // Construct the Google Maps URL.
     // The 'query' parameter is used to search for the lat,lng pair.
     final Uri googleMapsUrl = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+      'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng',
     );
 
     try {
