@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../models/order.dart';
+import '../services/location_service.dart';
 
 class AssignedOrderScreen extends StatefulWidget {
   const AssignedOrderScreen({super.key});
@@ -23,6 +26,37 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
     customerLng: -122.1702937,
     orderAmount: 35.75,
   );
+
+  final LocationService _locationService = LocationService();
+  Position? _currentPosition;
+  StreamSubscription<Position>? _positionStreamSubscription;
+
+  void initState() {
+    super.initState();
+    _startLocationUpdates();
+  }
+
+  void _startLocationUpdates() {
+    // Listen to the stream of position updates from our service
+    _positionStreamSubscription = _locationService.getPositionStream().listen((
+      Position position,
+    ) {
+      // Update the UI with the new position
+      setState(() {
+        _currentPosition = position;
+      });
+
+      print(
+        '📍 Location Update: Lat: ${position.latitude}, Lng: ${position.longitude}',
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _positionStreamSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +100,26 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
             ),
 
             const Spacer(),
+
+            _buildDriverLocationStatus(),
+            const SizedBox(height: 16),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDriverLocationStatus() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Text(
+          _currentPosition != null
+              ? 'My Location: ${_currentPosition!.latitude.toStringAsFixed(4)}, ${_currentPosition!.longitude.toStringAsFixed(4)}'
+              : 'Fetching driver location...',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
         ),
       ),
     );
