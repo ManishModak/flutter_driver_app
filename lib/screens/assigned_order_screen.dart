@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/order.dart';
 import '../services/location_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AssignedOrderScreen extends StatefulWidget {
   const AssignedOrderScreen({super.key});
@@ -50,6 +51,31 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
         '📍 Location Update: Lat: ${position.latitude}, Lng: ${position.longitude}',
       );
     });
+  }
+
+  void _launchMaps(double lat, double lng) async {
+    // Construct the Google Maps URL.
+    // The 'query' parameter is used to search for the lat,lng pair.
+    final Uri googleMapsUrl = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+    );
+
+    try {
+      // Check if the URL can be launched.
+      if (await canLaunchUrl(googleMapsUrl)) {
+        // Launch the URL. `launchMode` is optional but good practice.
+        await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+      } else {
+        // If the URL can't be launched, show an error.
+        // (This is unlikely for a valid https URL)
+        throw 'Could not launch $googleMapsUrl';
+      }
+    } catch (e) {
+      // Optional: Show a snackbar or dialog to the user if launching fails.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open maps: ${e.toString()}')),
+      );
+    }
   }
 
   @override
@@ -137,23 +163,36 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: Padding(
         padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        // We wrap the content in a Row to place the button next to the text.
+        child: Row(
           children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.teal,
+            // The Expanded widget makes the Column take up all available horizontal space.
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.teal,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(name, style: const TextStyle(fontSize: 18)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Coordinates: ${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}',
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            Text(name, style: const TextStyle(fontSize: 18)),
-            const SizedBox(height: 4),
-            Text(
-              'Coordinates: ${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            // This is the new navigation button.
+            IconButton(
+              icon: const Icon(Icons.navigation, color: Colors.teal, size: 30),
+              onPressed: () => _launchMaps(lat, lng),
             ),
           ],
         ),
