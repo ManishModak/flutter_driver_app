@@ -32,16 +32,73 @@ class LocationService {
     return true;
   }
 
-  /// Returns a stream that emits the device's current position whenever it changes.
+  /// Returns a stream that emits the device's current position every 10 seconds.
   Stream<Position> getPositionStream() {
-    final LocationSettings locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      // Update the location when the user has moved at least 10 meters.
-      distanceFilter: 10,
-    );
     // First, check for permissions before trying to get the stream.
     _handleLocationPermission();
-    return Geolocator.getPositionStream(locationSettings: locationSettings);
+
+    // Create a stream controller to manage our custom time-based location updates
+    late StreamController<Position> streamController;
+    Timer? locationTimer;
+
+    streamController = StreamController<Position>(
+      onListen: () {
+        // Start the timer when someone listens to the stream
+        locationTimer = Timer.periodic(Duration(seconds: 10), (timer) async {
+          try {
+            final LocationSettings locationSettings = LocationSettings(
+              accuracy: LocationAccuracy.high,
+              distanceFilter: 0,
+            );
+
+            final Position position = await Geolocator.getCurrentPosition(
+              locationSettings: locationSettings,
+            );
+
+            if (!streamController.isClosed) {
+              streamController.add(position);
+            }
+          } catch (e) {
+            if (!streamController.isClosed) {
+              streamController.addError(e);
+            }
+          }
+        });
+
+        // Get initial position immediately
+        _getInitialPosition(streamController);
+      },
+      onCancel: () {
+        locationTimer?.cancel();
+        streamController.close();
+      },
+    );
+
+    return streamController.stream;
+  }
+
+  /// Gets the initial position when stream starts
+  Future<void> _getInitialPosition(
+    StreamController<Position> controller,
+  ) async {
+    try {
+      final LocationSettings locationSettings = LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 0,
+      );
+
+      final Position position = await Geolocator.getCurrentPosition(
+        locationSettings: locationSettings,
+      );
+
+      if (!controller.isClosed) {
+        controller.add(position);
+      }
+    } catch (e) {
+      if (!controller.isClosed) {
+        controller.addError(e);
+      }
+    }
   }
 
   /// Calculates the distance in meters between two geographic points.

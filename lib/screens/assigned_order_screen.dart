@@ -19,13 +19,11 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
   final Order assignedOrder = Order(
     id: 'ORD-12345',
     restaurantName: 'Gourmet Burger Kitchen',
-    // Coordinates for the Googleplex in Mountain View, CA
-    restaurantLat: 37.4219999,
-    restaurantLng: -122.0840575,
+    restaurantLat: 37.190955,
+    restaurantLng: -121.749845,
     customerName: 'Jane Doe',
-    // Coordinates for Stanford University
-    customerLat: 37.4274745,
-    customerLng: -122.1702937,
+    customerLat: 37.195985,
+    customerLng: -121.743793,
     orderAmount: 35.75,
   );
 
