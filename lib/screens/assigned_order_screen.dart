@@ -33,6 +33,7 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
 
   OrderStatus _orderStatus = OrderStatus.Assigned;
 
+  @override
   void initState() {
     super.initState();
     _startLocationUpdates();
@@ -56,23 +57,17 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
 
   void _launchMaps(double lat, double lng) async {
     // Construct the Google Maps URL.
-    // The 'query' parameter is used to search for the lat,lng pair.
     final Uri googleMapsUrl = Uri.parse(
       'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng',
     );
 
     try {
-      // Check if the URL can be launched.
       if (await canLaunchUrl(googleMapsUrl)) {
-        // Launch the URL. `launchMode` is optional but good practice.
         await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
       } else {
-        // If the URL can't be launched, show an error.
-        // (This is unlikely for a valid https URL)
         throw 'Could not launch $googleMapsUrl';
       }
     } catch (e) {
-      // Optional: Show a snackbar or dialog to the user if launching fails.
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not open maps: ${e.toString()}')),
       );
@@ -91,47 +86,200 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
       appBar: AppBar(
         title: Text('Order #${assignedOrder.id}'),
         backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Simple Status Indicator
+            _buildSimpleStatusIndicator(),
+
+            const SizedBox(height: 16),
+
             // Section for Restaurant Details
-            _buildLocationCard(
+            _buildSimpleLocationCard(
               title: 'Restaurant',
               name: assignedOrder.restaurantName,
               lat: assignedOrder.restaurantLat,
               lng: assignedOrder.restaurantLng,
+              icon: Icons.restaurant,
             ),
             const SizedBox(height: 16),
 
             // Section for Customer Details
-            _buildLocationCard(
+            _buildSimpleLocationCard(
               title: 'Customer',
               name: assignedOrder.customerName,
               lat: assignedOrder.customerLat,
               lng: assignedOrder.customerLng,
+              icon: Icons.person,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
-            // Section for Order Amount
-            Center(
-              child: Text(
-                'Order Amount: \$${assignedOrder.orderAmount.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+            // Order Amount
+            _buildSimpleOrderAmount(),
+
+            const SizedBox(height: 16),
+
+            // Driver Location
+            _buildSimpleDriverLocation(),
+
+            const SizedBox(height: 20),
+
+            // Action Widget
+            _buildSimpleActionWidget(),
+
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Simple status indicator
+  Widget _buildSimpleStatusIndicator() {
+    String statusText = _getStatusText();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(Icons.info_outline, color: Colors.teal),
+            const SizedBox(width: 8),
+            Text(
+              'Status: $statusText',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getStatusText() {
+    switch (_orderStatus) {
+      case OrderStatus.Assigned:
+        return 'Order Assigned';
+      case OrderStatus.TripStarted:
+        return 'En Route to Restaurant';
+      case OrderStatus.AtRestaurant:
+        return 'At Restaurant';
+      case OrderStatus.PickedUp:
+        return 'En Route to Customer';
+      case OrderStatus.AtCustomer:
+        return 'At Customer';
+      case OrderStatus.Delivered:
+        return 'Delivered';
+    }
+  }
+
+  // Simple location card
+  Widget _buildSimpleLocationCard({
+    required String title,
+    required String name,
+    required double lat,
+    required double lng,
+    required IconData icon,
+  }) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: Colors.teal, size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.teal,
+                  ),
                 ),
+                const Spacer(),
+                ElevatedButton.icon(
+                  onPressed: () => _launchMaps(lat, lng),
+                  icon: const Icon(Icons.navigation, size: 18),
+                  label: const Text('Navigate'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              name,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Location: ${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSimpleOrderAmount() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(Icons.receipt, color: Colors.green, size: 24),
+            const SizedBox(width: 8),
+            const Text(
+              'Order Amount:',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const Spacer(),
+            Text(
+              '\$${assignedOrder.orderAmount.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
 
-            const Spacer(),
-
-            _buildActionWidget(),
-            const SizedBox(height: 16),
-            _buildDriverLocationStatus(),
-            const SizedBox(height: 16),
+  Widget _buildSimpleDriverLocation() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.my_location, color: Colors.blue, size: 24),
+                SizedBox(width: 8),
+                Text(
+                  'My Location',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _currentPosition != null
+                  ? '${_currentPosition!.latitude.toStringAsFixed(6)}, ${_currentPosition!.longitude.toStringAsFixed(6)}'
+                  : 'Getting location...',
+              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+            ),
           ],
         ),
       ),
@@ -140,93 +288,23 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
 
   String _formatDistance(double distanceInMeters) {
     if (distanceInMeters >= 1000) {
-      // If distance is 1km or more, convert to km and show one decimal place.
       final double distanceInKm = distanceInMeters / 1000;
       return '${distanceInKm.toStringAsFixed(1)} km';
     } else {
-      // Otherwise, show the distance in meters.
       return '${distanceInMeters.toStringAsFixed(0)} m';
     }
   }
 
-  Widget _buildDriverLocationStatus() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Text(
-          _currentPosition != null
-              ? 'My Location: ${_currentPosition!.latitude.toStringAsFixed(4)}, ${_currentPosition!.longitude.toStringAsFixed(4)}'
-              : 'Fetching driver location...',
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
-        ),
-      ),
-    );
-  }
-
-  // A reusable helper widget to display location info in a Card.
-  Widget _buildLocationCard({
-    required String title,
-    required String name,
-    required double lat,
-    required double lng,
-  }) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        // We wrap the content in a Row to place the button next to the text.
-        child: Row(
-          children: [
-            // The Expanded widget makes the Column take up all available horizontal space.
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.teal,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(name, style: const TextStyle(fontSize: 18)),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Coordinates: ${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}',
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-            // This is the new navigation button.
-            IconButton(
-              icon: const Icon(Icons.navigation, color: Colors.teal, size: 30),
-              onPressed: () => _launchMaps(lat, lng),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Builds the main action button and distance text based on the current order status.
-  Widget _buildActionWidget() {
+  // Simple action widget with all geofencing functionality preserved
+  Widget _buildSimpleActionWidget() {
     switch (_orderStatus) {
       case OrderStatus.Assigned:
-        return _buildButton('Start Trip', () {
+        return _buildSimpleButton('Start Trip', Colors.teal, () {
           setState(() => _orderStatus = OrderStatus.TripStarted);
         });
 
       case OrderStatus.TripStarted:
-        // Initialize distance with a very large number.
         double distanceToRestaurant = double.infinity;
-
-        // Only calculate distance if we have the driver's location.
         if (_currentPosition != null) {
           distanceToRestaurant = _locationService.getDistance(
             _currentPosition!.latitude,
@@ -235,41 +313,46 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
             assignedOrder.restaurantLng,
           );
         }
-
-        // THE CRITICAL GEOFENCE CHECK
         bool canArrive = distanceToRestaurant <= 50;
 
-        // --- DEBUG LOGGING ---
+        // Debug logging
         print('--- GEOFENCE CHECK (Restaurant) ---');
-        print('Current Order Status: $_orderStatus');
-        print(
-          'Current Position: ${_currentPosition?.latitude}, ${_currentPosition?.longitude}',
-        );
-        print(
-          'Restaurant Position: ${assignedOrder.restaurantLat}, ${assignedOrder.restaurantLng}',
-        );
-        print('Calculated Distance: $distanceToRestaurant meters');
-        print('Can Arrive? (is distance <= 50): $canArrive');
-        print('Button will be ENABLED: $canArrive');
-        print(
-          'Button callback will be: ${canArrive ? "FUNCTION" : "NULL (DISABLED)"}',
-        );
-        print('------------------------------------');
-        // --- END DEBUG LOGGING ---
+        print('Distance: $distanceToRestaurant meters, Can Arrive: $canArrive');
 
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              // Use our new formatter here
-              'Distance to Restaurant: ${_formatDistance(distanceToRestaurant)}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Text(
+                      'Distance to Restaurant: ${_formatDistance(distanceToRestaurant)}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: canArrive ? Colors.green : Colors.red,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      canArrive
+                          ? 'You can proceed!'
+                          : 'Move closer to continue',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: canArrive ? Colors.green : Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 8),
-            _buildButton(
+            _buildSimpleButton(
               'Arrived at Restaurant',
-              // The button is DISABLED by passing null if canArrive is false.
+              canArrive ? Colors.teal : Colors.grey,
               canArrive
                   ? () {
                       setState(() => _orderStatus = OrderStatus.AtRestaurant);
@@ -280,7 +363,7 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
         );
 
       case OrderStatus.AtRestaurant:
-        return _buildButton('Picked Up Order', () {
+        return _buildSimpleButton('Picked Up Order', Colors.orange, () {
           setState(() => _orderStatus = OrderStatus.PickedUp);
         });
 
@@ -294,41 +377,46 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
             assignedOrder.customerLng,
           );
         }
-
-        // THE CRITICAL GEOFENCE CHECK
         bool canDeliver = distanceToCustomer <= 50;
 
-        // --- DEBUG LOGGING ---
+        // Debug logging
         print('--- GEOFENCE CHECK (Customer) ---');
-        print('Current Order Status: $_orderStatus');
-        print(
-          'Current Position: ${_currentPosition?.latitude}, ${_currentPosition?.longitude}',
-        );
-        print(
-          'Customer Position: ${assignedOrder.customerLat}, ${assignedOrder.customerLng}',
-        );
-        print('Calculated Distance: $distanceToCustomer meters');
-        print('Can Deliver? (is distance <= 50): $canDeliver');
-        print('Button will be ENABLED: $canDeliver');
-        print(
-          'Button callback will be: ${canDeliver ? "FUNCTION" : "NULL (DISABLED)"}',
-        );
-        print('------------------------------------');
-        // --- END DEBUG LOGGING ---
+        print('Distance: $distanceToCustomer meters, Can Deliver: $canDeliver');
 
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              // Use our new formatter here
-              'Distance to Customer: ${_formatDistance(distanceToCustomer)}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Text(
+                      'Distance to Customer: ${_formatDistance(distanceToCustomer)}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: canDeliver ? Colors.green : Colors.red,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      canDeliver
+                          ? 'You can proceed!'
+                          : 'Move closer to continue',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: canDeliver ? Colors.green : Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 8),
-            _buildButton(
+            _buildSimpleButton(
               'Arrived at Customer',
-              // The button is DISABLED by passing null if canDeliver is false.
+              canDeliver ? Colors.teal : Colors.grey,
               canDeliver
                   ? () {
                       setState(() => _orderStatus = OrderStatus.AtCustomer);
@@ -339,45 +427,55 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
         );
 
       case OrderStatus.AtCustomer:
-        return _buildButton('Complete Delivery', () {
+        return _buildSimpleButton('Complete Delivery', Colors.green, () {
           setState(() => _orderStatus = OrderStatus.Delivered);
         });
 
       case OrderStatus.Delivered:
-        return const Center(
-          child: Text(
-            'Order Complete! 🎉',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.green,
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                const Icon(Icons.check_circle, size: 48, color: Colors.green),
+                const SizedBox(height: 16),
+                const Text(
+                  'Order Completed! 🎉',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Great job! The delivery has been completed successfully.',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
         );
     }
   }
 
-  /// A helper method to create a consistently styled ElevatedButton.
-  /// The `onPressed` callback can be null, which automatically disables the button.
-  Widget _buildButton(String text, VoidCallback? onPressed) {
-    // --- DEBUG LOGGING ---
-    print('🔘 BUILDING BUTTON: "$text"');
-    print(
-      '🔘 onPressed callback is: ${onPressed == null ? "NULL (BUTTON DISABLED)" : "FUNCTION (BUTTON ENABLED)"}',
-    );
-    print(
-      '🔘 Button will appear as: ${onPressed == null ? "GREY/DISABLED" : "TEAL/ENABLED"}',
-    );
-    // --- END DEBUG LOGGING ---
-
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.teal,
-        disabledBackgroundColor: Colors.grey, // Color when button is disabled
-        padding: const EdgeInsets.symmetric(vertical: 16),
+  Widget _buildSimpleButton(String text, Color color, VoidCallback? onPressed) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        onPressed: onPressed,
+        child: Text(
+          text,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
       ),
-      onPressed: onPressed,
-      child: Text(text, style: const TextStyle(color: Colors.white)),
     );
   }
 }
