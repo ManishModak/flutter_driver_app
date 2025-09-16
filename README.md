@@ -243,6 +243,14 @@ For assignment submission, create a **5-minute Loom video** demonstrating:
 
 *Show the app working end-to-end with clear explanation of each feature*
 
+### 📹 Demo Video
+
+Watch the complete app demonstration here:
+
+🎥 **[Flutter Driver App Demo - Loom Video](https://www.loom.com/share/a86d98e3369b49a480fbf5b65a3f9db7?sid=e27d40c7-d4a8-4f84-87ff-753c53cd9541)**
+
+*This 5-minute demo video shows the complete delivery workflow including login, order management, navigation integration, geofencing checks, and real-time location tracking.*
+
 ### 🌟 Brownie Points Achieved
 - **UI Polish**: ✅ Clean design with consistent spacing and intuitive buttons
 - **Well-structured Codebase**: ✅ Separation of concerns, organized folders
