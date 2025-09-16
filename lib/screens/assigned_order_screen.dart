@@ -3,35 +3,29 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/order.dart';
 import '../services/location_service.dart';
+import '../services/order_manager.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../util/order_status_enum.dart';
 
 class AssignedOrderScreen extends StatefulWidget {
-  const AssignedOrderScreen({super.key});
+  final Order order;
+  
+  const AssignedOrderScreen({super.key, required this.order});
 
   @override
   State<AssignedOrderScreen> createState() => _AssignedOrderScreenState();
 }
 
 class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
-  // Creating a hardcoded "dummy" order for display.
-  // We are using realistic coordinates for testing navigation later.
-  final Order assignedOrder = Order(
-    id: 'ORD-12345',
-    restaurantName: 'Gourmet Burger Kitchen',
-    restaurantLat: 37.190955,
-    restaurantLng: -121.749845,
-    customerName: 'Jane Doe',
-    customerLat: 37.195985,
-    customerLng: -121.743793,
-    orderAmount: 35.75,
-  );
-
   final LocationService _locationService = LocationService();
+  final OrderManager _orderManager = OrderManager();
+  
   Position? _currentPosition;
   StreamSubscription<Position>? _positionStreamSubscription;
-
   OrderStatus _orderStatus = OrderStatus.Assigned;
+
+  // Getter for the assigned order from widget
+  Order get assignedOrder => widget.order;
 
   @override
   void initState() {
@@ -429,6 +423,8 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
       case OrderStatus.AtCustomer:
         return _buildSimpleButton('Complete Delivery', Colors.green, () {
           setState(() => _orderStatus = OrderStatus.Delivered);
+          // Complete the order in OrderManager
+          _orderManager.completeOrder(assignedOrder.id);
         });
 
       case OrderStatus.Delivered:
@@ -452,6 +448,26 @@ class _AssignedOrderScreenState extends State<AssignedOrderScreen> {
                   'Great job! The delivery has been completed successfully.',
                   style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () {
+                      // Return to home screen with completion result
+                      Navigator.of(context).pop('completed');
+                    },
+                    child: const Text(
+                      'Return to Dashboard',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ),
                 ),
               ],
             ),

@@ -1,6 +1,6 @@
 // lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
-import 'assigned_order_screen.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   // Controllers to manage the text inside the TextFields
@@ -195,7 +195,7 @@ class LoginScreen extends StatelessWidget {
       ),
       onPressed: () {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const AssignedOrderScreen()),
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       },
       child: const Text(
